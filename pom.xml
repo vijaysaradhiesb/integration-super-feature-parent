@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.integration.service</groupId>
+        <artifactId>integration-parent</artifactId>
+        <version>[1.0,2)</version>
+    </parent>
+
+    <groupId>com.integration.service</groupId>
+    <artifactId>integration-super-feature-parent</artifactId>
+    <version>1.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <module.name />
+        <docker.sf.variant>base</docker.sf.variant>
+        <docker.sf.providers>,</docker.sf.providers>
+        <docker.sf.mocks>,</docker.sf.mocks>
+    </properties>
+
+    <name>${organization.name} ${module.name}</name>
+
+    <scm>
+        <connection>${scm.protocol}${scm.git.protocol}${scm.host}:${scm.ssh.port}/integ/integration-super-feature-parent.git</connection>
+        <developerConnection>${scm.protocol}${scm.git.protocol}${scm.host}:${scm.ssh.port}/integ/integration-super-feature-parent.git</developerConnection>
+        <url>http://${scm.host}:${scm.http.port}/projects/integ/integration-super-feature-parent/</url>
+      <tag>HEAD</tag>
+  </scm>
+
+    <profiles>
+        <profile>
+            <id>super-feature-parent</id>
+            <activation>
+                <file>
+                    <missing>src/main/resources/features.xml</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-script-artifact</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>attach-artifact</goal>
+                                </goals>
+                                <configuration>
+                                    <artifacts>
+                                        <artifact>
+                                            <file>src/main/resources/scripts/deploy.sh</file>
+                                            <type>sh</type>
+                                            <classifier>deploy</classifier>
+                                        </artifact>
+                                    </artifacts>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>dockerize</id>
+            <activation>
+                <file>
+                    <exists>src/main/resources/features.xml</exists>
+                </file>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.osgi</groupId>
+                    <artifactId>org.osgi.core</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.osgi</groupId>
+                    <artifactId>org.osgi.compendium</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.integ.activemq</groupId>
+                    <artifactId>configuration</artifactId>
+                    <version>${amq.configuration.compatibility.version}</version>
+                </dependency>
+                <!-- This can't be here as Maven release plugin is freaking out. Instead it has to be added to every SF- unfortunately -->
+                <!--<dependency>-->
+                    <!--<groupId>com.integ.integration.service</groupId>-->
+                    <!--<artifactId>integration-super-feature-parent</artifactId>-->
+                    <!--<version>${integration.super.feature.parent-version}</version>-->
+                    <!--<type>tar.gz</type>-->
+                    <!--<classifier>project-sources</classifier>-->
+                <!--</dependency>-->
+            </dependencies>
+
+            <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <filtering>true</filtering>
+                    </resource>
+                </resources>
+
+                <plugins>
+                    <!-- Unpacking parent resources -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <id>unpack-sf-dependencies</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>unpack-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <includeArtifactIds>integration-super-feature-parent</includeArtifactIds>
+                                    <outputDirectory>${project.build.directory}/unpacked-parent-sources</outputDirectory>
+                                    <includes>**/descriptors/*.*,**/*.sh</includes>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>unpack-amq-dependencies</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>unpack-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <includeGroupIds>com.integ.activemq</includeGroupIds>
+                                    <includeArtifactIds>configuration</includeArtifactIds>
+                                    <outputDirectory>${project.build.directory}/unpacked-amq-sources</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>filter</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>resources</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Installing features.xml -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-feature-artifact</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>attach-artifact</goal>
+                                </goals>
+                                <configuration>
+                                    <artifacts>
+                                        <artifact>
+                                            <file>target/classes/features.xml</file>
+                                            <type>xml</type>
+                                            <classifier>features</classifier>
+                                        </artifact>
+                                    </artifacts>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Resolving features dependencies -->
+                    <plugin>
+                        <groupId>org.apache.karaf.tooling</groupId>
+                        <artifactId>karaf-maven-plugin</artifactId>
+                        <version>4.0.9_INTEG_11</version>
+                        <executions>
+                            <execution>
+                                <id>features-add-to-repo</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>features-add-to-repository</goal>
+                                </goals>
+                                <configuration>
+                                    <includeMvnBasedDescriptors>true</includeMvnBasedDescriptors>
+                                    <descriptors>
+                                        <descriptor>mvn:org.apache.karaf.assemblies.features/standard/${karaf-version}/xml/features</descriptor>
+                                        <descriptor>mvn:org.apache.karaf.assemblies.features/enterprise/${karaf-version}/xml/features</descriptor>
+                                        <descriptor>mvn:org.apache.karaf.assemblies.features/spring/${karaf-version}/xml/features</descriptor>
+                                        <descriptor>mvn:org.apache.camel.karaf/apache-camel/${camel-version}/xml/features</descriptor>
+                                        <descriptor>mvn:io.fabric8/fabric8-karaf/${fabric.version}/xml/features</descriptor>
+                                        <descriptor>mvn:${project.groupId}/${project.artifactId}/${project.version}/xml/features</descriptor>
+                                    </descriptors>
+                                    <features>
+                                        <feature>${product}-${customer}-connectivity</feature>
+                                        <feature>${product}-${customer}-base</feature>
+                                        <feature>${product}-${customer}-live</feature>
+                                        <feature>${product}-${customer}-mock</feature>
+                                    </features>
+                                    <includeMvnBasedDescriptors>true</includeMvnBasedDescriptors>
+                                    <repository>target/features-repo</repository>
+                                    <generateMavenMetadata>true</generateMavenMetadata>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <copy todir="${project.build.directory}/docker/scripts" flatten="true">
+                                            <fileset dir="${project.build.directory}/unpacked-parent-sources/">
+                                                <include name="**/scripts/*.*" />
+                                            </fileset>
+                                        </copy>
+                                        <copy todir="${project.build.directory}/docker/descriptors" flatten="true">
+                                            <fileset dir="${project.build.directory}/unpacked-parent-sources/">
+                                                <include name="**/descriptors/*.*" />
+                                            </fileset>
+                                        </copy>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>installer-copy-custom</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                        <unjar dest="${project.build.directory}/lib-resources-unpacked">
+                                            <fileset dir="${project.build.directory}/features-repo">
+                                                <include name="**/integ/**/*.jar" />
+                                                <!--<include name="**/integ/**/*.jar" />-->
+                                            </fileset>
+                                        </unjar>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>unix-bin</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <finalName>${project.artifactId}-repo-${project.version}</finalName>
+                                    <descriptors>
+                                        <descriptor>${project.build.directory}/docker/descriptors/bundles-assembly.xml</descriptor>
+                                        <descriptor>${project.build.directory}/docker/descriptors/configs-assembly.xml</descriptor>
+                                        <descriptor>${project.build.directory}/docker/descriptors/script-assembly.xml</descriptor>
+                                        <descriptor>${project.build.directory}/docker/descriptors/liquibase-assembly.xml</descriptor>
+                                        <descriptor>${project.build.directory}/docker/descriptors/hazelcast-assembly.xml</descriptor>
+                                    </descriptors>
+                                    <tarLongFileMode>gnu</tarLongFileMode>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dockerize-SF-do-not-call-this-profile-directly-instead-add-Ddockerize</id>
+            <activation>
+                <file>
+                    <exists>src/main/resources/features.xml</exists>
+                </file>
+                <property>
+                    <name>!dockerize-infra</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <authConfig>
+                                <useOpenShiftAuth>true</useOpenShiftAuth>
+                            </authConfig>
+                            <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
+                            <images>
+                                <image>
+                                    <alias>${project.artifactId}</alias>
+                                    <name>integ/${project.groupId}.${project.artifactId}:${project.version}</name>
+
+                                    <watch>
+                                        <interval>5000</interval>
+                                        <mode>both</mode>
+                                    </watch>
+                                    <build>
+                                        <from>${docker.registry}/${docker.from}</from>
+                                        <tags>
+                                            <tag>${project.version}</tag>
+                                        </tags>
+                                        <assembly>
+                                            <descriptor>${project.build.directory}/docker/descriptors/docker-assembly.xml</descriptor>
+                                        </assembly>
+                                        <runCmds>
+                                            <run>chmod u+x /maven/deploy.sh</run>
+                                            <run>echo $'#!/bin/sh\n\
+                                                set -e\n\
+                                                /maven/deploy.sh --deploy-microservice-docker \n\
+                                                /opt/fuse/init_features.sh &amp;\n\
+                                                /opt/fuse/bin/karaf\n' &gt; /opt/fuse/docker-start.sh</run>
+                                            <run>chmod u+x /opt/fuse/docker-start.sh</run>
+                                        </runCmds>
+                                    </build>
+                                    <run>
+                                        <namingStrategy>alias</namingStrategy>
+                                        <env>
+                                            <FUSE_DIR>/opt/fuse</FUSE_DIR>
+                                            <WORK_DIR>/maven</WORK_DIR>
+                                            <FEATURE_VERSION>${project.version}</FEATURE_VERSION>
+                                            <SF_ENV_NAME>localhost</SF_ENV_NAME>
+                                            <SF_VARIANT>${docker.sf.variant}</SF_VARIANT>
+                                            <SF_PREFIX>${product}-${customer}-</SF_PREFIX>
+                                            <SF_PROJECT_GROUPID_ARTFACTID>${project.groupId}/${project.artifactId}</SF_PROJECT_GROUPID_ARTFACTID>
+                                            <SF_PROVIDERS_FEATURES>${docker.sf.providers}</SF_PROVIDERS_FEATURES>
+                                            <SF_SIMULATORS_FEATURES>${docker.sf.mocks}</SF_SIMULATORS_FEATURES>
+
+                                            <GER_HZ_NETWORK_MEMBERS>${ger.hz.network.tcpip.members}</GER_HZ_NETWORK_MEMBERS>
+                                            <JMS1_SERVICE_NAME>${docker.jms1.service}</JMS1_SERVICE_NAME>
+                                            <JMS1_USERNAME>${docker.jms1.username}</JMS1_USERNAME>
+                                            <JMS1_PASSWORD>${docker.jms1.password}</JMS1_PASSWORD>
+                                            <JMS2_SERVICE_NAME>${docker.jms2.service}</JMS2_SERVICE_NAME>
+                                            <JMS2_USERNAME>${docker.jms2.username}</JMS2_USERNAME>
+                                            <JMS2_PASSWORD>${docker.jms2.password}</JMS2_PASSWORD>
+
+                                            <XADS1_SERVICE_NAME>${docker.xads1.service}</XADS1_SERVICE_NAME>
+                                            <XADS1_USERNAME>${docker.xads1.username}</XADS1_USERNAME>
+                                            <XADS1_PASSWORD>${docker.xads1.password}</XADS1_PASSWORD>
+                                            <XADS1_PORT>${docker.xads1.port}</XADS1_PORT>
+                                            <XADS1_DB>${docker.xads1.dbname}</XADS1_DB>
+                                            <XADS1_DRIVER>${docker.xads1.driver.class}</XADS1_DRIVER>
+                                            <XADS2_SERVICE_NAME>${docker.xads2.service}</XADS2_SERVICE_NAME>
+                                            <XADS2_USERNAME>${docker.xads2.username}</XADS2_USERNAME>
+                                            <XADS2_PASSWORD>${docker.xads2.password}</XADS2_PASSWORD>
+                                            <XADS2_PORT>${docker.xads2.port}</XADS2_PORT>
+                                            <XADS2_DB>${docker.xads2.dbname}</XADS2_DB>
+                                            <XADS2_DRIVER>${docker.xads2.driver.class}</XADS2_DRIVER>
+                                        </env>
+                                        <ports>
+                                            <port>${docker.host.http.port}:8181</port>
+                                            <port>${docker.host.ssh.port}:8101</port>
+                                            <port>${docker.host.jmx.port}:1099</port>
+                                            <port>${docker.host.rmi.port}:44444</port>
+                                        </ports>
+                                        <cmd>
+                                            <shell>/opt/fuse/docker-start.sh</shell>
+                                        </cmd>
+                                        <network>
+                                            <mode>custom</mode>
+                                            <name>integration</name>
+                                            <alias>fuse</alias>
+                                            <alias>karaf</alias>
+                                        </network>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

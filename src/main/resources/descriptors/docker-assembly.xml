@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly>
+    <id>docker</id>
+
+    <fileSets>
+        <!--
+            Docker assembly is a sum of all other assemblies
+        -->
+
+        <!-- ETC if any, to be used by individual services deployments for local dev testing purposes without SF -->
+        <fileSet>
+            <directory>${project.basedir}/src/test/resources/docker/etc</directory>
+            <outputDirectory>/etc</outputDirectory>
+        </fileSet>
+
+        <!-- ActiveMQ configuration -->
+        <fileSet>
+            <directory>${project.build.directory}/unpacked-amq-sources</directory>
+            <outputDirectory>amq</outputDirectory>
+        </fileSet>
+
+        <!-- Scripts -->
+        <fileSet>
+            <directory>${project.build.directory}/docker/scripts</directory>
+            <outputDirectory></outputDirectory>
+        </fileSet>
+
+        <!-- Liquibase -->
+        <fileSet>
+            <directory>${project.build.directory}/lib-resources-unpacked</directory>
+            <includes>
+                <include>deployment/liquibase-files/**/*.xml</include>
+            </includes>
+            <outputDirectory>liquibase/files</outputDirectory>
+        </fileSet>
+
+        <!-- Hazelcast -->
+        <fileSet>
+            <directory>${project.build.directory}/lib-resources-unpacked</directory>
+            <includes>
+                <include>deployment/hazelcast/**/*.xml</include>
+            </includes>
+            <outputDirectory>hazelcast/files</outputDirectory>
+        </fileSet>
+
+        <!-- Configs -->
+        <fileSet>
+            <directory>target/classes/configs</directory>
+            <outputDirectory>configs/files</outputDirectory>
+        </fileSet>
+
+        <!-- Bundles -->
+        <fileSet>
+            <directory>target/features-repo</directory>
+            <outputDirectory>bundles/files</outputDirectory>
+
+            <!--
+                Please do not change below list without my approval.
+                Those lines are to ensure nothing from outside of JBoss Fuse
+                distribution will be deployed to fuse.
+                Only allowed for now exceptions are Atomikos and SQL Server JDBC Driver.
+            -->
+            <includes>
+                <include>com/integ/**</include>
+
+                <include>com/microsoft/**</include>
+                <include>org/mariadb/**</include>
+                <include>com/hazelcast/hazelcast-spring/**</include> <!-- surprisingly it is not provided by fuse -->
+                <include>xom/xom/**</include> <!-- surprisingly it is not provided by fuse -->
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly>
+    <id>bundles</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+
+    <fileSets>
+        <fileSet>
+            <directory>target/features-repo</directory>
+            <outputDirectory></outputDirectory>
+
+            <!--
+                Please do not change below list without my approval.
+                Those lines are to ensure nothing from outside of JBoss Fuse
+                distribution will be deployed to fuse.
+                Only allowed for now exceptions are Atomikos and SQL Server JDBC Driver.
+            -->
+            <includes>
+                <include>com/integ/**</include>
+
+                <include>com/microsoft/**</include>
+                <include>org/mariadb/**</include>
+                <include>com/hazelcast/hazelcast-spring/**</include> <!-- surprisingly it is not provided by fuse -->
+                <include>xom/xom/**</include> <!-- surprisingly it is not provided by fuse -->
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
